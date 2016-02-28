@@ -8,7 +8,8 @@
 
 
 
-CREATE TABLE players (id_player serial, name varchar(80), win_record int);
+CREATE TABLE players (id_player serial, name varchar(80));
+--win_recordいらん！！！！
 
 -- players
   -- serial ID
@@ -26,8 +27,14 @@ CREATE TABLE players (id_player serial, name varchar(80), win_record int);
 
 
 
-CREATE TABLE matches(id_match serial, id_winner int, id_loser int);
+--playerstandings
+CREATE TABLE playerstandings(id_player int, name varchar(80), wins int, matches int);
 
+
+
+
+CREATE TABLE matches(id_match serial, id_winner int, id_loser int);
+--これはidをid_playerと共有している。
 -- matches
   -- match number: match 1
   -- winner: 
