@@ -5,7 +5,6 @@
 
 import psycopg2
 
-
 def connect():
     """Connect to the PostgreSQL database.  Returns a database connection."""
 
@@ -30,10 +29,8 @@ def deletePlayers():
     c = conn.cursor()
     c.execute("TRUNCATE players;")
     conn.commit()
-
     c.execute("TRUNCATE playerstandings;")
     conn.commit()
-
     conn.close()
 
 
@@ -45,7 +42,6 @@ def countPlayers():
     c.execute("SELECT id_player, COUNT (id_player) as num FROM players GROUP BY id_player;")
     result = c.rowcount
     conn.close()
-
     return result
 
 
@@ -82,19 +78,16 @@ def playerStandings():
 
     conn = connect()
     c = conn.cursor()
-
-    c.execute("INSERT INTO playerstandings(id_player, name) (SELECT id_player, name from players GROUP BY id_player,name);")
+    c.execute("INSERT INTO playerstandings(id_player, name) (SELECT id_player, name FROM players GROUP BY id_player,name);")
     conn.commit()    
-    c.execute("UPDATE playerstandings SET wins = (SELECT COUNT (id_winner) from matches where matches.id_winner = playerstandings.id_player);")
+    c.execute("UPDATE playerstandings SET wins = (SELECT COUNT (id_winner) FROM matches where matches.id_winner = playerstandings.id_player);")
     conn.commit()
     c.execute("UPDATE playerstandings SET matches = (SELECT COUNT(*) FROM matches WHERE playerstandings.id_player = matches.id_winner or playerstandings.id_player = matches.id_loser);")
     conn.commit()
-
     c.execute("select * from playerstandings ORDER BY wins desc;")
     conn.commit()
     standings = c.fetchall()
     conn.close()
-
     return standings
 
 
@@ -110,17 +103,13 @@ def reportMatch(winner,loser):
     c = conn.cursor()
     c.execute("INSERT INTO matches(id_winner,id_loser) values(%s,%s);", (winner,loser))
     conn.commit()
-
-    c.execute("UPDATE playerstandings SET wins = (SELECT COUNT (id_winner) from matches where matches.id_winner = playerstandings.id_player);")
+    c.execute("UPDATE playerstandings SET wins = (SELECT COUNT (id_winner) FROM matches where matches.id_winner = playerstandings.id_player);")
     conn.commit()
-    
     c.execute("UPDATE playerstandings SET matches = (SELECT COUNT(*) FROM matches WHERE playerstandings.id_player = matches.id_winner or playerstandings.id_player = matches.id_loser);")
     conn.commit()
-    
     conn.close()
 
 
- 
 def swissPairings():
     """Returns a list of pairs of players for the next round of a match.
 
@@ -143,21 +132,15 @@ def swissPairings():
     conn.commit()
     results = c.fetchall()
     conn.close()
-
     #make an array to store tupples.
     final_pairing = []
-
     #how many records you have in results.
     thislen = len(results) 
-    
     for i in range(0, thislen, thislen * 1/2):
-
         id1   = results[i][0]
         name1 = results[i][1]
         id2   = results[i+1][0]
         name2 = results[i+1][1]
-
-        pairing = (id1, name1, id2, name2) 
-        final_pairing.append(pairing) 
-
+        pairing = (id1, name1, id2, name2)
+        final_pairing.append(pairing)
     return final_pairing
