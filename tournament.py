@@ -9,7 +9,6 @@ def connect():
     """Connect to the PostgreSQL database.  Returns a database connection."""
 
     return psycopg2.connect("dbname=tournament")
-    print conn.closed
 
 
 def deleteMatches():
@@ -78,11 +77,15 @@ def playerStandings():
 
     conn = connect()
     c = conn.cursor()
-    c.execute("INSERT INTO playerstandings(id_player, name) (SELECT id_player, name FROM players GROUP BY id_player,name);")
+    c.execute("INSERT INTO playerstandings(id_player, name) (SELECT id_player, name FROM \
+                players GROUP BY id_player,name);")
     conn.commit()    
-    c.execute("UPDATE playerstandings SET wins = (SELECT COUNT (id_winner) FROM matches where matches.id_winner = playerstandings.id_player);")
+    c.execute("UPDATE playerstandings SET wins = (SELECT COUNT (id_winner) FROM　\
+                matches where matches.id_winner = playerstandings.id_player);")
     conn.commit()
-    c.execute("UPDATE playerstandings SET matches = (SELECT COUNT(*) FROM matches WHERE playerstandings.id_player = matches.id_winner or playerstandings.id_player = matches.id_loser);")
+    c.execute("UPDATE playerstandings SET matches = (SELECT COUNT(*) FROM \
+                matches WHERE playerstandings.id_player = matches.id_winner or \
+                playerstandings.id_player = matches.id_loser);")
     conn.commit()
     c.execute("select * from playerstandings ORDER BY wins desc;")
     conn.commit()
@@ -103,9 +106,12 @@ def reportMatch(winner,loser):
     c = conn.cursor()
     c.execute("INSERT INTO matches(id_winner,id_loser) values(%s,%s);", (winner,loser))
     conn.commit()
-    c.execute("UPDATE playerstandings SET wins = (SELECT COUNT (id_winner) FROM matches where matches.id_winner = playerstandings.id_player);")
+    c.execute("UPDATE playerstandings SET wins = (SELECT COUNT (id_winner) FROM \
+            matches where matches.id_winner = playerstandings.id_player);")
     conn.commit()
-    c.execute("UPDATE playerstandings SET matches = (SELECT COUNT(*) FROM matches WHERE playerstandings.id_player = matches.id_winner or playerstandings.id_player = matches.id_loser);")
+    c.execute("UPDATE playerstandings SET matches = (SELECT COUNT(*) FROM \
+            matches WHERE playerstandings.id_player = matches.id_winner or \
+            playerstandings.id_player = matches.id_loser);")
     conn.commit()
     conn.close()
 
