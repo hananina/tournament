@@ -16,7 +16,8 @@ def deleteMatches():
 
     conn = connect()
     c = conn.cursor()
-    c.execute("TRUNCATE matches;")
+
+    c.execute("TRUNCATE table matches;")
     conn.commit()
     conn.close()
 
@@ -26,9 +27,8 @@ def deletePlayers():
 
     conn = connect()
     c = conn.cursor()
-    c.execute("TRUNCATE players;")
-    conn.commit()
-    c.execute("TRUNCATE playerstandings;")
+    c.execute("TRUNCATE players CASCADE;")
+
     conn.commit()
     conn.close()
 
@@ -77,17 +77,32 @@ def playerStandings():
 
     conn = connect()
     c = conn.cursor()
-    c.execute("INSERT INTO playerstandings(id_player, name) (SELECT id_player, name FROM players\
-                GROUP BY id_player,name);")
-    conn.commit()    
-    c.execute("UPDATE playerstandings SET wins = (SELECT COUNT (id_winner) FROM matches\
-                where matches.id_winner = playerstandings.id_player);")
-    conn.commit()
-    c.execute("UPDATE playerstandings SET matches = (SELECT COUNT(*) FROM matches \
-                WHERE playerstandings.id_player = matches.id_winner \
-                or playerstandings.id_player = matches.id_loser);")
-    conn.commit()
-    c.execute("select * from playerstandings ORDER BY wins desc;")
+    # view to store how manny wins per person have
+    c.execute("""CREATE TEMP VIEW winner_count AS SELECT players.id_player,
+            COUNT(matches.id_winner) AS total_wins FROM players LEFT JOIN matches 
+            ON players.id_player = matches.id_winner GROUP BY players.id_player;""")
+
+    # view to store how manny losses per person have done
+    c.execute("""CREATE TEMP VIEW loser_count AS SELECT players.id_player,
+            COUNT(matches.id_loser) AS total_losses FROM players LEFT JOIN matches 
+            ON players.id_player = matches.id_loser GROUP BY players.id_player;""")
+    
+    # view to store how manny matches(wins & losses) per person have done
+    c.execute("""CREATE TEMP VIEW matches_count AS SELECT winner_count.id_player,
+            loser_count.total_losses + winner_count.total_wins 
+            AS total_matches from winner_count, loser_count 
+            WHERE winner_count.id_player = loser_count.id_player 
+            ORDER BY winner_count.id_player;""")
+
+    c.execute("""UPDATE players SET wins = winner_count.total_wins 
+                FROM winner_count
+                WHERE players.id_player = winner_count.id_player;""")
+
+    c.execute("""UPDATE players SET matches = matches_count.total_matches 
+                FROM matches_count
+                WHERE players.id_player = matches_count.id_player;""")
+
+    c.execute("""SELECT * FROM players ORDER BY wins DESC;""")
     conn.commit()
     standings = c.fetchall()
     conn.close()
@@ -106,15 +121,7 @@ def reportMatch(winner,loser):
     c = conn.cursor()
     c.execute("INSERT INTO matches(id_winner,id_loser) values(%s,%s);", (winner,loser))
     conn.commit()
-    c.execute("UPDATE playerstandings SET wins = (SELECT COUNT (id_winner) FROM matches \
-                where matches.id_winner = playerstandings.id_player);")
-    conn.commit()
-    c.execute("UPDATE playerstandings SET matches = (SELECT COUNT(*) FROM matches \
-                WHERE playerstandings.id_player = matches.id_winner \
-                or playerstandings.id_player = matches.id_loser);")
-    conn.commit()
     conn.close()
-
 
 def swissPairings():
     """Returns a list of pairs of players for the next round of a match.
@@ -134,9 +141,7 @@ def swissPairings():
 
     conn = connect()
     c = conn.cursor()
-    c.execute("SELECT id_player, name FROM playerstandings ORDER BY wins DESC;")
-    conn.commit()
-    results = c.fetchall()
+    results = playerStandings()
     conn.close()
     #make an array to store tupples.
     final_pairing = []
